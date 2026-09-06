@@ -108,8 +108,6 @@ def render_auth_view() -> None:
 
                 if not is_valid:
                     st.error(f"❌ {error_message}")
-                elif new_password != confirm_password:
-                    st.error("❌ Passwords do not match.")
                 elif not all(
                     [school_name, admin_name, admin_email, admin_password]
                 ):

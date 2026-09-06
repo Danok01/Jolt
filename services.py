@@ -146,7 +146,7 @@ def generate_student_pdf(
     total_students = len(
         get_class_results(
             result_data.get("school_id", ""),
-            result_data.get("class_name", ""),
+            result_data.get("class_name", "").title(),
             result_data.get("academic_term", ""),
             result_data.get("academic_session", ""),
         )
