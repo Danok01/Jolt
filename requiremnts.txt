@@ -1,0 +1,8 @@
+streamlit
+pymongo
+pydantic
+email-validator
+pyjwt
+extra-streamlit-components
+fpdf2
+reportlab
