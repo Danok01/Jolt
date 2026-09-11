@@ -1,5 +1,5 @@
 streamlit
-pymongo[srv]==4.17.0
+pymongo[srv]
 pydantic
 email-validator
 pyjwt
