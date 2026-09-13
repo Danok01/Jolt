@@ -61,9 +61,60 @@ def render_auth_view() -> None:
                         st.rerun()
 
     # Standard Login & School Setup Tabs
-    tab_login, tab_register = st.tabs(
-        ["🔐 Login", "🏛️ Register School & Admin"]
+    tab_home, tab_login, tab_register = st.tabs(
+        ["🏠 Home", "🔐 Login", "🏛️ Register School & Admin"]
     )
+
+    # --- HOME TAB ---
+    with tab_home:
+        st.title("JRMS")
+        st.caption(
+            "A Secure Multi-Tenant Platform For Managing Academic Records, Teacher Rosters, and Student Evaluations."
+        )
+
+        st.divider()
+
+        st.subheader("What This Application Does")
+        st.write(
+            "This portal simplifies result processing by isolating data per school institution. "
+            "School administrators can register their institution, manage staff, and assign classes, "
+            "while teachers can log continuous assessments and exam scores."
+        )
+
+        # Core Features with varied typography styling
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### :blue[✦ Multi-Tenant Security]")
+            st.write(
+                "Strict data isolation per school using school-scoped database queries and encrypted session cookies."
+            )
+
+            st.markdown("### :green[✦ Dynamic Grade Engine]")
+            st.write(
+                "Automated calculation of Continuous Assessment (30%) and Examination (70%) into final grades."
+            )
+
+        with col2:
+            st.markdown("### :orange[✦ Role-Based Access]")
+            st.write(
+                "Tailored dashboards for **Administrators** (staff & class management) and **Teachers** (score entry)."
+            )
+
+            st.markdown("### :violet[✦ PDF Transcript Generation]")
+            st.write(
+                "Export clean, formatted student report cards directly to PDF."
+            )
+
+        st.divider()
+
+        st.subheader("How to Use the System")
+        st.markdown(
+            """
+        1. **Register Your School**: Switch to the **Register School** tab above to set up your admin account.
+        2. **Configure Staff**: Log into the **Admin Dashboard** to add teachers and assign their classes (e.g., `SS1`, `JSS2 Gold`).
+        3. **Enter Scores**: Teachers sign in with their credentials to upload student marks and generate reports.
+        """
+        )
 
     with tab_login:
         st.subheader("Account Login")
@@ -259,7 +310,7 @@ def render_teacher_dashboard() -> None:
     with col1:
         selected_class = st.selectbox("Select Class", assigned_classes)
     with col2:
-        academic_session = st.selectbox("Academic Session", ["2025/2026", "2026/2027"])
+        academic_session = st.selectbox("Academic Session", ["2025/2026", "2026/2027", "2027/2028", "2028/2029"])
     with col3:
         academic_term = st.selectbox(
             "Academic Term", ["First Term", "Second Term", "Third Term"]

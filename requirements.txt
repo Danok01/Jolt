@@ -6,3 +6,4 @@ pyjwt
 extra-streamlit-components
 fpdf2
 reportlab
+python-dotenv
