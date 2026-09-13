@@ -148,7 +148,7 @@ def create_student(
         )
 
         student_dict = student_doc.model_dump(by_alias=True, exclude={"id"})
-        result = db.users.insert_one(student_dict)
+        result = db.students.insert_one(student_dict)
         student_dict["_id"] = str(result.inserted_id)
         return student_dict
     except ValidationError as e:
