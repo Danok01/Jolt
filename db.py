@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from bson.objectid import ObjectId
 from pymongo import MongoClient, ReturnDocument
 from pydantic import ValidationError
@@ -7,6 +7,7 @@ from config import DB_NAME, MONGO_URI
 from utils import hash_password, calculate_grade
 from models import StudentModel, UserModel, SchoolModel
 import re
+import pandas as pd
 
 
 # 1. DATABASE CONNECTION MANAGEMENT
@@ -294,6 +295,98 @@ def update_bulk_class_ranks(rank_updates: List[Dict]) -> None:
             {"$set": {"class_rank": update["class_rank"]}},
         )
 
+def bulk_register_students(
+    school_id: str, df: pd.DataFrame
+) -> Tuple[int, List[str]]:
+    """Validates dataframe records and performs batch registration in MongoDB.
+
+    Returns (inserted_count, list_of_error_messages).
+    """
+    errors = []
+
+    # 1. Column Header Standardization
+    required_cols = {"admission_no", "full_name", "current_class"}
+    df.columns = [
+        str(c).strip().lower().replace(" ", "_") for c in df.columns
+    ]
+
+    missing_cols = required_cols - set(df.columns)
+    if missing_cols:
+        return 0, [
+            f"Missing required columns in Excel file: {', '.join(missing_cols)}"
+        ]
+
+    # 2. Check for empty required fields in DataFrame
+    clean_df = df.dropna(
+        subset=["full_name", "admission_no", "current_class"]
+    ).copy()
+    dropped_count = len(df) - len(clean_df)
+    if dropped_count > 0:
+        errors.append(
+            f"⚠️ Skipped {dropped_count} rows due to missing required fields."
+        )
+
+    if clean_df.empty:
+        return 0, errors + ["No valid student records found in file."]
+
+    # 3. Check for duplicates within the uploaded file itself
+    clean_df["admission_no_clean"] = (
+        clean_df["admission_no"].astype(str).str.strip().str.upper()
+    )
+    if clean_df["admission_no_clean"].duplicated().any():
+        dupes = clean_df[clean_df["admission_no_clean"].duplicated()][
+            "admission_no_clean"
+        ].tolist()
+        return 0, [
+            f"Duplicate admission numbers found within the Excel file: {', '.join(dupes)}"
+        ]
+
+    # 4. Check for existing admission numbers in MongoDB for this school
+    existing_students = db.students.find(
+        {
+            "school_id": school_id,
+            "admission_no": {
+                "$in": clean_df["admission_no_clean"].tolist()
+            },
+        },
+        {"admission_no": 1},
+    )
+    existing_adm_nos = {
+        s["admission_no"].upper() for s in existing_students
+    }
+
+    if existing_adm_nos:
+        clean_df = clean_df[
+            ~clean_df["admission_no_clean"].isin(existing_adm_nos)
+        ]
+        errors.append(
+            f"⚠️ Skipped {len(existing_adm_nos)} students whose admission numbers already exist in database: {', '.join(existing_adm_nos)}"
+        )
+
+    if clean_df.empty:
+        return 0, errors + [
+            "All students in the uploaded file already exist in the database."
+        ]
+
+    # 5. Prepare documents for MongoDB batch insert
+    documents = []
+    now = datetime.utcnow()
+
+    for _, row in clean_df.iterrows():
+        doc = {
+            "school_id": school_id,
+            "admission_no": str(row["admission_no"]).strip().upper(),
+            "full_name": str(row["full_name"]).strip().title(),
+            "current_class": str(row["current_class"]).strip().title(),
+            "created_at": now,
+        }
+        documents.append(doc)
+
+    # 6. Execute MongoDB batch insert
+    result = db.students.insert_many(documents)
+    inserted_count = len(result.inserted_ids)
+
+    return inserted_count, errors
 
 # ==============================================================================
 # MONGODB ATLAS (CLOUD) CONNECTION REFERENCE

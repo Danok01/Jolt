@@ -12,7 +12,8 @@ from db import (
     save_or_update_student_subject_score,
     update_user_password,
     delete_teacher_by_email,
-    get_student_count_for_classes
+    get_student_count_for_classes,
+    bulk_register_students
 )
 from services import (
     compute_and_update_class_ranks,
@@ -20,6 +21,8 @@ from services import (
     process_subject_scores,
 )
 from utils import generate_temp_password, get_ordinal, verify_password, validate_password_strength
+import pandas as pd
+import io
 
 
 # 1. AUTHENTICATION VIEW (LOGIN & REGISTER & TEMP PASSWORD RESET)
@@ -174,6 +177,79 @@ def render_auth_view() -> None:
                         "School and Admin created! Please log in above."
                     )
 
+def render_bulk_student_upload(school_id: str) -> None:
+    """Renders Excel/CSV file uploader and sample template generator for student registration."""
+    st.markdown("### 📥 Bulk Student Registration")
+    st.write(
+        "Upload an Excel (`.xlsx`) or CSV file containing student records to register multiple students at once."
+    )
+
+    # 1. Downloadable Sample Excel Template Generator
+    sample_df = pd.DataFrame(
+        [
+            {
+                "Admission No": "ADM001",
+                "Full Name": "John Doe",
+                "Current Class": "JSS 1",
+            },
+            {
+                "Admission No": "ADM002",
+                "Full Name": "Jane Smith",
+                "Current Class": "JSS 2",
+            },
+        ]
+    )
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        sample_df.to_excel(writer, index=False, sheet_name="Students")
+
+    st.download_button(
+        label="📄 Download Sample Excel Template",
+        data=buffer.getvalue(),
+        file_name="bulk_student_upload_template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    st.divider()
+
+    # 2. File Upload Interface
+    uploaded_file = st.file_uploader(
+        "Choose an Excel or CSV file", type=["xlsx", "xls", "csv"]
+    )
+
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+
+            st.markdown("#### 📋 File Preview")
+            st.dataframe(df.head(10), use_container_width=True)
+            st.caption(f"Total Rows Detected: `{len(df)}`")
+
+            # Upload Trigger
+            if st.button(
+                f"🚀 Import {len(df)} Students", type="primary"
+            ):
+                with st.spinner("Processing records..."):
+                    inserted_count, warnings = bulk_register_students(
+                        school_id, df
+                    )
+
+                if warnings:
+                    for warning in warnings:
+                        st.warning(warning)
+
+                if inserted_count > 0:
+                    st.success(
+                        f"✅ Successfully registered {inserted_count} new students!"
+                    )
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"❌ Error reading file: {e}")
 
 # 2. ADMIN DASHBOARD VIEW
 def render_admin_dashboard() -> None:
@@ -239,6 +315,7 @@ def render_admin_dashboard() -> None:
                         school_id, admission_no, student_name, student_class
                     )
                     st.success(f"Student {student_name} registered under {student_class}!")
+        render_bulk_student_upload(school_id)
 
     # Tab 3: Overview Lists
     with tab_list:
