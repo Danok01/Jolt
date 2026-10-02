@@ -24,6 +24,29 @@ from utils import generate_temp_password, get_ordinal, verify_password, validate
 import pandas as pd
 import io
 
+def render_password_reset_form() -> None:
+    """Renders the password change form and processes password updates."""
+
+    with st.form("password_reset_form"):
+        new_password = st.text_input("New Password", type="password")
+        confirm_password = st.text_input("Confirm New Password", type="password")
+        submit = st.form_submit_button("Update Password")
+
+        if submit:
+            if not new_password or not confirm_password:
+                st.error("❌ Please fill out all required fields.")
+            elif new_password != confirm_password:
+                st.error("❌ Passwords do not match.")
+            else:
+                is_valid, error_message = validate_password_strength(new_password)
+                if not is_valid:
+                    st.error(f"❌ {error_message}")
+                else:
+                    user_id = st.session_state["user"]["_id"]
+                    update_user_password(user_id, new_password)
+                                        
+                    st.success("✅ Password updated successfully!")
+                    st.rerun()
 
 # 1. AUTHENTICATION VIEW (LOGIN & REGISTER & TEMP PASSWORD RESET)
 def render_auth_view() -> None:
@@ -126,6 +149,7 @@ def render_auth_view() -> None:
             password = st.text_input("Password", type="password")
             login_submit = st.form_submit_button("Log In")
 
+
             if login_submit:
                 user = get_user_by_email(email)
                 if user and verify_password(password, user["password_hash"]):
@@ -145,6 +169,8 @@ def render_auth_view() -> None:
                     st.rerun()
                 else:
                     st.error("Invalid email or password.")
+        st.subheader("Forgot Password?")
+        render_password_reset_form()
 
     with tab_register:
         st.subheader("Setup New School & Admin Account")

@@ -237,7 +237,7 @@ def generate_student_pdf(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFAF0")),
-                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#DD6B20")),
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#2B6CB0")),
                 ("PADDING", (0, 0), (-1, -1), 10),
             ]
         )
